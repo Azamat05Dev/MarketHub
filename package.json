@@ -1,0 +1,35 @@
+{
+    "name": "markethub",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Enterprise-grade microservices platform with real-time crypto streaming, high-load booking system, and full DevOps pipeline",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "test": "turbo run test",
+        "lint": "turbo run lint",
+        "clean": "turbo run clean",
+        "docker:up": "docker-compose up -d",
+        "docker:down": "docker-compose down",
+        "docker:logs": "docker-compose logs -f",
+        "k8s:apply": "kubectl apply -f infrastructure/k8s/",
+        "k8s:delete": "kubectl delete -f infrastructure/k8s/"
+    },
+    "devDependencies": {
+        "turbo": "^2.3.3"
+    },
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=9.0.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/markethub.git"
+    },
+    "author": "Azamat Qalmuratov",
+    "license": "MIT"
+}

@@ -1,0 +1,70 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  TRADER
+  VIP_ANALYST
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?  @map("password_hash")
+  role          Role     @default(USER)
+  isVerified    Boolean  @default(false) @map("is_verified")
+  twoFASecret   String?  @map("two_fa_secret")
+  twoFAEnabled  Boolean  @default(false) @map("two_fa_enabled")
+  oauthProvider String?  @map("oauth_provider") // 'google', 'github', null
+  oauthId       String?  @map("oauth_id")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  alerts        PriceAlert[]
+
+  @@index([email])
+  @@index([oauthProvider, oauthId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model PriceAlert {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  symbol      String   // BTC, ETH, SOL...
+  targetPrice Float    @map("target_price")
+  condition   String   // "above" | "below"
+  isActive    Boolean  @default(true) @map("is_active")
+  triggered   Boolean  @default(false)
+  triggeredAt DateTime? @map("triggered_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([symbol])
+  @@index([isActive])
+  @@map("price_alerts")
+}

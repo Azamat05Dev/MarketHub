@@ -1,0 +1,95 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Test Stage
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, market-stream-service, booking-service, frontend]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Auth Service
+        if: matrix.service == 'auth-service'
+        working-directory: apps/auth-service
+        run: |
+          npm ci
+          npm run test
+          
+      - name: Test Market Stream Service
+        if: matrix.service == 'market-stream-service'
+        working-directory: apps/market-stream-service
+        run: |
+          go test ./...
+          
+      - name: Test Booking Service
+        if: matrix.service == 'booking-service'
+        working-directory: apps/booking-service
+        run: |
+          pip install -r requirements.txt
+          pytest
+          
+      - name: Test Frontend
+        if: matrix.service == 'frontend'
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          npm run lint
+
+  # Build Stage
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        service: [auth-service, market-stream-service, booking-service, frontend]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+
+  # Deploy Stage
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Deploying to production..."
+          # Add kubectl commands here
+          # kubectl apply -f infrastructure/k8s/

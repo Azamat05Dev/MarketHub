@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-stream-service
+  labels:
+    app: market-stream-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: market-stream-service
+  template:
+    metadata:
+      labels:
+        app: market-stream-service
+    spec:
+      containers:
+      - name: market-stream-service
+        image: markethub/market-stream-service:latest
+        ports:
+        - containerPort: 3002
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: markethub-secrets
+              key: redis-url
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-stream-service
+spec:
+  selector:
+    app: market-stream-service
+  ports:
+  - port: 3002
+    targetPort: 3002
+  type: ClusterIP
